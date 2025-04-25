@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Update API URL to use the correct backend URL
-const API_URL = 'http://localhost:5001/api/notes';
+// Update API URL to use the Vercel deployment URL
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://notes-website-mern-git-main-abhisheks-projects-2307762b.vercel.app/api/notes'
+  : 'http://localhost:5001/api/notes';
 
 function App() {
   const [notes, setNotes] = useState([]);

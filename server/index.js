@@ -7,8 +7,12 @@ require('dotenv').config();
 
 const app = express();
 
-// Configure CORS - Allow all origins during development
-app.use(cors());
+// Configure CORS - Allow all origins
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 
