@@ -13,26 +13,37 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection with error handling
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/notesapp';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+// Debug log to check environment variables
+console.log('Environment variables loaded:', {
+    NODE_ENV: process.env.NODE_ENV,
+    MONGODB_URI: MONGODB_URI ? 'MongoDB URI is set' : 'MongoDB URI is not set'
+});
+
+if (!MONGODB_URI) {
+    console.error('MONGODB_URI is not defined in environment variables');
+    console.error('Please make sure you have a .env file in the server directory with MONGODB_URI defined');
+    process.exit(1);
+}
 
 // MongoDB connection options
 const mongooseOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
 };
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI, mongooseOptions)
-  .then(() => {
-    console.log('Connected to MongoDB at:', MONGODB_URI);
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    console.error('Please make sure MongoDB is running on your machine');
-    process.exit(1);
-  });
+    .then(() => {
+        console.log('Connected to MongoDB successfully');
+    })
+    .catch(err => {
+        console.error('MongoDB connection error:', err);
+        process.exit(1);
+    });
 
 // API Routes
 app.get('/api/notes', async (req, res) => {
