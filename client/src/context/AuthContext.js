@@ -1,5 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+const API_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://notes-mern-final.onrender.com'
+    : '';
+
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -19,7 +23,7 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const response = await fetch('/api/login', {
+            const response = await fetch(`${API_URL}/api/login`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -44,7 +48,7 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (email, password) => {
         try {
-            const response = await fetch('/api/register', {
+            const response = await fetch(`${API_URL}/api/register`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',

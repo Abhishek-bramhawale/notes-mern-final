@@ -13,7 +13,7 @@ const app = express();
 // Configure CORS
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? 'https://notes-website-mern-git-main-abhisheks-projects-2307762b.vercel.app'
+        ? 'https://notes-mern-final.vercel.app'
         : 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

@@ -3,8 +3,9 @@ import { useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import './App.css';
 
-// Update API URL to use relative path
-const API_URL = '/api/notes';
+const API_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://notes-mern-final.onrender.com/api/notes'
+    : '/api/notes';
 
 function App() {
   const { user, token, logout } = useAuth();
