@@ -2,16 +2,22 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 const Note = require('./models/Note');
+const User = require('./models/User');
+const auth = require('./middleware/auth');
 require('dotenv').config();
 
 const app = express();
 
-// Configure CORS - Allow all origins
+// Configure CORS
 app.use(cors({
-    origin: '*',
+    origin: process.env.NODE_ENV === 'production' 
+        ? 'https://notes-website-mern-git-main-abhisheks-projects-2307762b.vercel.app'
+        : 'http://localhost:3000',
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
 app.use(express.json());
@@ -49,11 +55,65 @@ mongoose.connect(MONGODB_URI, mongooseOptions)
         process.exit(1);
     });
 
-// API Routes
-app.get('/api/notes', async (req, res) => {
+// Authentication Routes
+app.post('/api/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
+
+        const user = new User({ email, password });
+        await user.save();
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
+        res.status(201).json({ user, token });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const user = await User.findOne({ email });
+        
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid login credentials' });
+        }
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid login credentials' });
+        }
+
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
+        res.json({ user, token });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Protected API Routes
+app.get('/api/notes', auth, async (req, res) => {
     try {
         console.log('Fetching notes...');
-        const notes = await Note.find().sort({ createdAt: -1 });
+        const notes = await Note.find({ user: req.user._id }).sort({ createdAt: -1 });
         console.log('Notes fetched successfully:', notes);
         res.json(notes);
     } catch (error) {
@@ -62,13 +122,16 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-app.post('/api/notes', async (req, res) => {
+app.post('/api/notes', auth, async (req, res) => {
     try {
         console.log('Creating note:', req.body);
         if (!req.body.text) {
             return res.status(400).json({ error: 'Note text is required' });
         }
-        const note = new Note({ text: req.body.text });
+        const note = new Note({ 
+            text: req.body.text,
+            user: req.user._id
+        });
         await note.save();
         console.log('Note created successfully:', note);
         res.status(201).json(note);
@@ -78,14 +141,14 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-app.put('/api/notes/:id', async (req, res) => {
+app.put('/api/notes/:id', auth, async (req, res) => {
     try {
         console.log('Updating note:', req.params.id, req.body);
         if (!req.body.text) {
             return res.status(400).json({ error: 'Note text is required' });
         }
-        const note = await Note.findByIdAndUpdate(
-            req.params.id,
+        const note = await Note.findOneAndUpdate(
+            { _id: req.params.id, user: req.user._id },
             { text: req.body.text },
             { new: true, runValidators: true }
         );
@@ -100,17 +163,19 @@ app.put('/api/notes/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/notes/:id', async (req, res) => {
+app.delete('/api/notes/:id', auth, async (req, res) => {
     try {
         console.log('Attempting to delete note:', req.params.id);
         
-        // Validate the ID format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             console.error('Invalid note ID format:', req.params.id);
             return res.status(400).json({ error: 'Invalid note ID format' });
         }
 
-        const note = await Note.findByIdAndDelete(req.params.id);
+        const note = await Note.findOneAndDelete({ 
+            _id: req.params.id,
+            user: req.user._id
+        });
         
         if (!note) {
             console.error('Note not found:', req.params.id);

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from './context/AuthContext';
+import Login from './components/Login';
 import './App.css';
 
-// Update API URL to use the Vercel deployment URL
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://notes-website-mern-git-main-abhisheks-projects-2307762b.vercel.app/api/notes'
-  : 'http://localhost:5001/api/notes';
+// Update API URL to use relative path
+const API_URL = '/api/notes';
 
 function App() {
+  const { user, token, logout } = useAuth();
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [editNote, setEditNote] = useState(null);
@@ -14,13 +15,20 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchNotes();
-  }, []);
+    if (token) {
+      fetchNotes();
+    }
+  }, [token]);
 
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(API_URL);
+      const response = await fetch(API_URL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -47,7 +55,11 @@ function App() {
       
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
         body: method !== 'DELETE' ? JSON.stringify({ text: newNote }) : undefined
       });
 
@@ -88,9 +100,18 @@ function App() {
     }
   };
 
+  if (!user) {
+    return <Login />;
+  }
+
   return (
     <div className="container">
-      <h1 className="header">Notes App</h1>
+      <div className="header-container">
+        <h1 className="header">Notes App</h1>
+        <button onClick={logout} className="logout-button">
+          Logout
+        </button>
+      </div>
 
       {error && <div className="error-message">{error}</div>}
 
